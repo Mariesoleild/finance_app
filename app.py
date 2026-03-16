@@ -6,7 +6,7 @@ import plotly.express as px
 st.set_page_config(page_title="Allocation d'Actifs", page_icon="📊", layout="centered")
 
 # Titre de l'application
-st.title("� Allocation d'Actifs selon l'Âge")
+st.title("📊 Allocation d'Actifs selon l'Âge")
 st.markdown("Découvrez la répartition recommandée de votre portefeuille basée sur votre âge.")
 
 # Données d'allocation par âge
@@ -100,7 +100,7 @@ fig.update_layout(
     margin=dict(t=20, b=20, l=20, r=20)
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 
 # Tableau détaillé
 st.subheader("📋 Détail de l'Allocation")
@@ -112,7 +112,7 @@ df_table = pd.DataFrame({
     "Niveau de Risque": [niveaux_risque[k] for k in allocation.keys()]
 })
 
-st.dataframe(df_table, use_container_width=True, hide_index=True)
+st.dataframe(df_table, width='stretch', hide_index=True)
 
 # Note explicative
 st.markdown("---")
@@ -122,3 +122,4 @@ Votre situation personnelle (tolérance au risque, objectifs, situation financi�
 peut nécessiter une allocation différente. Consultez un conseiller financier pour 
 des recommandations personnalisées.
 """)
+
