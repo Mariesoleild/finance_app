@@ -5,6 +5,94 @@ import plotly.express as px
 # --- Configuration de la page ---
 st.set_page_config(page_title="Finances Personnelles", page_icon="💰", layout="wide")
 
+# Paramètres esthétiques globaux via CSS
+st.markdown("""
+<style>
+    /* Importer une police moderne */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Fond global plus doux */
+    .stApp {
+        background-color: #f4f7f6;
+    }
+    
+    /* Ajustement de l'espacement principal */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    /* Style de la barre latérale */
+    [data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #e1e4e8;
+    }
+    
+    /* Style des cartes pour les indicateurs (Metrics) */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 15px 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid #e2e8f0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #2c3e50;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #7f8c8d;
+    }
+
+    /* Boutons stylisés */
+    .stButton>button {
+        background-color: #3498db;
+        color: white;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border: none;
+        box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(52, 152, 219, 0.3);
+    }
+    
+    /* Titres avec une couleur plus riche */
+    h1, h2, h3 {
+        color: #1a202c;
+    }
+    
+    /* Tableaux modernes */
+    [data-testid="stDataFrame"] {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Fonction utilitaire de formatage ---
+def format_currency(value):
+    """Formate un nombre en format monétaire lisible (ex: 1 800,00 $)"""
+    return "{:,.2f} $".format(value).replace(",", "X").replace(".", ",").replace("X", " ")
+
 # --- Fonctions des pages ---
 
 def afficher_tableau_de_bord():
@@ -25,25 +113,25 @@ def afficher_tableau_de_bord():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("Revenus du mois", f"{revenus:,.2f} $".replace(",", " "))
+        st.metric("Revenus du mois", format_currency(revenus))
     with col2:
-        st.metric("Dépenses totales", f"{depenses:,.2f} $".replace(",", " "), delta=f"-{depenses} $", delta_color="inverse")
+        st.metric("Dépenses totales", format_currency(depenses), delta=format_currency(-depenses), delta_color="inverse")
     with col3:
-        st.metric("Argent restant", f"{restant:,.2f} $".replace(",", " "), delta=f"{restant} $")
+        st.metric("Argent restant", format_currency(restant), delta=format_currency(restant), delta_color="normal")
         
     st.markdown("---")
     
     # --- Progression du budget ---
     st.subheader("🎯 Progression du budget")
     st.progress(progression)
-    st.caption(f"Vos dépenses représentent **{progression:.1%}** de votre budget de **{budget_max} $** ce mois-ci.")
+    st.caption(f"Vos dépenses représentent **{progression:.1%}** de votre budget total de **{format_currency(budget_max)}** ce mois-ci.")
     
     if progression >= 1.0:
-        st.error("⚠️ Vous avez dépassé votre budget !")
+        st.error(f"🚨 Vous avez dépassé votre budget de **{format_currency(depenses - budget_max)}** ! Revoyez vos dépenses urgemment.")
     elif progression >= 0.8:
-        st.warning("⚠️ Attention, vous vous approchez de votre limite de budget.")
+        st.warning(f"⚠️ Attention, vous avez consommé plus de 80% de votre budget (Reste : **{format_currency(budget_max - depenses)}**).")
     else:
-        st.success("✅ Vos dépenses sont bien maîtrisées !")
+        st.success(f"✅ Vos dépenses sont bien maîtrisées ! Vous avez encore une marge de **{format_currency(budget_max - depenses)}**.")
         
     st.markdown("---")
     
@@ -101,21 +189,27 @@ def afficher_budget_mensuel():
     st.subheader("📊 Résumé du budget")
     
     col_res1, col_res2, col_res3 = st.columns(3)
-    col_res1.metric("Revenus", f"{revenus:,.2f} $".replace(",", " "))
-    col_res2.metric("Dépenses Totales", f"{depenses_totales:,.2f} $".replace(",", " "), delta=f"-{depenses_totales} $", delta_color="inverse")
-    col_res3.metric("Argent Restant", f"{restant:,.2f} $".replace(",", " "), delta=f"{restant} $")
+    col_res1.metric("Revenus", format_currency(revenus))
+    col_res2.metric("Dépenses Totales", format_currency(depenses_totales), delta=format_currency(-depenses_totales), delta_color="inverse")
+    col_res3.metric("Argent Restant", format_currency(restant), delta=format_currency(restant), delta_color="normal")
     
+    # Feedback instantané d'économie
+    if restant > 0:
+        st.info(f"💡 Astuce : Si ce budget est respecté, vous pourriez économiser **{format_currency(restant)}** ce mois-ci.")
+    elif restant < 0:
+        st.error(f"🛑 Alerte rouge : Vos dépenses fixes et variables combinées dépassent déjà vos revenus de **{format_currency(abs(restant))}**.")
+
     # --- Budget Prévu ---
     st.markdown("---")
     st.subheader("🎯 Comparaison budget prévu")
-    budget_prevu = st.number_input("Quel était votre budget total de dépenses prévu pour ce mois ? ($)", min_value=0.0, value=2500.0, step=100.0)
+    budget_prevu = st.number_input("Quel est votre budget total autorisé pour ce mois ? ($)", min_value=0.0, value=2500.0, step=100.0)
     
     difference = budget_prevu - depenses_totales
     
     if difference >= 0:
-        st.success(f"✅ Vous êtes en dessous de votre budget de **{difference:,.2f} $**. Bon travail !".replace(",", " "))
+        st.success(f"✅ Félicitations ! Vous êtes en dessous de votre budget de **{format_currency(difference)}**.")
     else:
-        st.error(f"⚠️ Vous avez dépassé votre budget de **{abs(difference):,.2f} $**.".replace(",", " "))
+        st.warning(f"⚠️ Vous avez dépassé budget de **{format_currency(abs(difference))}**.")
     
     # --- Graphique ---
     labels = ["Dépenses Fixes", "Dépenses Variables", "Argent Restant (Épargne)"]
@@ -139,13 +233,15 @@ def afficher_budget_mensuel():
 
 def afficher_suivi_depenses():
     st.title("🛒 Suivi des Dépenses")
-    st.markdown("Saisissez et suivez vos dépenses au jour le jour.")
+    st.markdown("Saisissez, modifiez et suivez vos dépenses au jour le jour.")
     
-    # Initialize session state for expenses if it doesn't exist
+    # Initialize session state for expenses and categories
     if 'depenses_list' not in st.session_state:
         st.session_state.depenses_list = pd.DataFrame(columns=["Date", "Catégorie", "Description", "Montant"])
+    if 'categories_list' not in st.session_state:
+        st.session_state.categories_list = ["Nourriture", "Transport", "Loyer", "Loisirs", "Santé", "Vêtements", "Factures", "Autre"]
         
-    # Form for adding an expense
+    # --- Formulaire ---
     with st.expander("➕ Ajouter une nouvelle dépense", expanded=True):
         with st.form("ajout_depense_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -153,7 +249,7 @@ def afficher_suivi_depenses():
             with col1:
                 import datetime
                 date_depense = st.date_input("Date", datetime.date.today())
-                categorie = st.selectbox("Catégorie", ["Nourriture", "Transport", "Loyer", "Loisirs", "Santé", "Vêtements", "Factures", "Autre"])
+                categorie = st.selectbox("Catégorie", st.session_state.categories_list)
                 
             with col2:
                 montant = st.number_input("Montant ($)", min_value=0.01, step=1.0, format="%.2f")
@@ -164,74 +260,105 @@ def afficher_suivi_depenses():
             if submit:
                 # Add to dataframe
                 nouvelle_depense = pd.DataFrame({
-                    "Date": [date_depense],
+                    "Date": [pd.to_datetime(date_depense).date()],
                     "Catégorie": [categorie],
                     "Description": [description],
                     "Montant": [montant]
                 })
-                # Using pd.concat instead of append since append is deprecated
+                # Using pd.concat instead of append
                 st.session_state.depenses_list = pd.concat([st.session_state.depenses_list, nouvelle_depense], ignore_index=True)
                 st.success("Dépense ajoutée avec succès ! 🎉")
+                st.rerun()
+
+    with st.expander("⚙️ Gérer les catégories personnalisées"):
+        nouvelle_cat = st.text_input("Ajouter une nouvelle catégorie")
+        if st.button("Ajouter") and nouvelle_cat:
+            if nouvelle_cat not in st.session_state.categories_list:
+                st.session_state.categories_list.append(nouvelle_cat)
+                st.success(f"Catégorie '{nouvelle_cat}' ajoutée aux options.")
+                st.rerun()
+            else:
+                st.error("Cette catégorie existe déjà.")
 
     st.markdown("---")
     
     # Show expenses and graph if there are any
     if not st.session_state.depenses_list.empty:
-        st.subheader("📜 Historique des dépenses")
+        st.subheader("📜 Historique des dépenses (Éditable)")
+        st.info("💡 **Astuce** : Vous pouvez modifier ou supprimer (bouton avec la corbeille) des lignes directement dans ce tableau !")
         
-        # Afficher la table triée par date
-        df_affichage = st.session_state.depenses_list.sort_values(by="Date", ascending=False)
-        st.dataframe(
-            df_affichage, 
+        # Le DataFrame éditable
+        edited_df = st.data_editor(
+            st.session_state.depenses_list,
+            num_rows="dynamic",
             use_container_width=True,
             column_config={
-                "Date": st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
-                "Montant": st.column_config.NumberColumn("Montant ($)", format="%.2f $")
+                "Date": st.column_config.DateColumn("Date", format="YYYY-MM-DD", required=True),
+                "Catégorie": st.column_config.SelectboxColumn("Catégorie", options=st.session_state.categories_list, required=True),
+                "Montant": st.column_config.NumberColumn("Montant ($)", format="%.2f $", min_value=0.01, required=True),
+                "Description": st.column_config.TextColumn("Description")
             },
-            hide_index=True
+            hide_index=True,
+            key="editeur_depenses"
         )
         
-        # Afficher les métriques
-        total_depenses = st.session_state.depenses_list["Montant"].sum()
-        st.metric("Total cumulé des dépenses", f"{total_depenses:,.2f} $".replace(",", " "))
-        
+        # Si des modifications sont apportées, on les sauvegarde
+        if not edited_df.equals(st.session_state.depenses_list):
+            st.session_state.depenses_list = edited_df
+            st.rerun()
+            
         st.markdown("---")
         
-        st.subheader("📊 Graphiques d'analyse")
+        st.subheader("🔍 Filtres rapides et Analyse")
         
+        # Création des filtres
+        filtre_cat = st.multiselect("Filtrer par catégories", options=st.session_state.categories_list, default=[])
+        
+        # Application du filtre
+        df_filtre = st.session_state.depenses_list.copy()
+        if filtre_cat:
+            df_filtre = df_filtre[df_filtre["Catégorie"].isin(filtre_cat)]
+        
+        # Afficher les métriques
+        total_depenses = df_filtre["Montant"].sum()
+        st.metric("Total des dépenses (selon les filtres)", format_currency(total_depenses))
+        
+        st.markdown("<br>", unsafe_allow_html=True)
         col_g1, col_g2 = st.columns(2)
         
-        with col_g1:
-            # Group by category for the graph
-            df_group = st.session_state.depenses_list.groupby("Catégorie")["Montant"].sum().reset_index()
-            
-            fig = px.pie(
-                df_group, 
-                values="Montant", 
-                names="Catégorie", 
-                hole=0.4,
-                title="Dépenses par catégorie"
-            )
-            fig.update_traces(textinfo='percent+label')
-            fig.update_layout(margin=dict(t=30, b=10, l=10, r=10))
-            st.plotly_chart(fig, use_container_width=True)
-            
-        with col_g2:
-            # Bar chart over time
-            df_time = st.session_state.depenses_list.groupby("Date")["Montant"].sum().reset_index()
-            fig_bar = px.bar(
-                df_time, 
-                x="Date", 
-                y="Montant",
-                title="Dépenses par jour",
-                text_auto='.2s'
-            )
-            fig_bar.update_layout(margin=dict(t=30, b=10, l=10, r=10))
-            st.plotly_chart(fig_bar, use_container_width=True)
+        if not df_filtre.empty:
+            with col_g1:
+                # Group by category for the graph
+                df_group = df_filtre.groupby("Catégorie")["Montant"].sum().reset_index()
+                fig = px.pie(
+                    df_group, 
+                    values="Montant", 
+                    names="Catégorie", 
+                    hole=0.4,
+                    title="Dépenses filtrées par catégorie"
+                )
+                fig.update_traces(textinfo='percent+label')
+                fig.update_layout(margin=dict(t=30, b=10, l=10, r=10))
+                st.plotly_chart(fig, use_container_width=True)
+                
+            with col_g2:
+                # Bar chart over time
+                df_time = df_filtre.groupby("Date")["Montant"].sum().reset_index()
+                fig_bar = px.bar(
+                    df_time, 
+                    x="Date", 
+                    y="Montant",
+                    title="Dépenses filtrées par jour",
+                    text_auto='.2s'
+                )
+                fig_bar.update_layout(margin=dict(t=30, b=10, l=10, r=10))
+                st.plotly_chart(fig_bar, use_container_width=True)
+        else:
+            st.warning("Vos filtres excluent toutes les données actuelles.")
             
         st.markdown("---")
         # Bouton pour réinitialiser
-        if st.button("🗑️ Effacer toutes les dépenses"):
+        if st.button("🗑️ Effacer l'entièreté des données (Irréversible)"):
             st.session_state.depenses_list = pd.DataFrame(columns=["Date", "Catégorie", "Description", "Montant"])
             st.rerun()
 
@@ -248,6 +375,17 @@ def afficher_analyse_depenses():
         
     df = st.session_state.depenses_list.copy()
     
+    # 0. Export CSV
+    col_dl1, col_dl2 = st.columns([3, 1])
+    with col_dl2:
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Exporter l'historique (CSV)",
+            data=csv,
+            file_name='mes_depenses.csv',
+            mime='text/csv',
+        )
+    
     # 1. Comparaison mois précédent
     st.subheader("📅 Comparaison au mois précédent")
     
@@ -255,7 +393,7 @@ def afficher_analyse_depenses():
     mois_actuel_total = df["Montant"].sum()
     
     with col1:
-        st.metric("Total des dépenses ce mois-ci", f"{mois_actuel_total:,.2f} $".replace(",", " "))
+        st.metric("Total des dépenses ce mois-ci", format_currency(mois_actuel_total))
     with col2:
         mois_precedent = st.number_input("Entrez le total de vos dépenses du mois précédent ($)", min_value=0.0, value=0.0, step=50.0)
         
@@ -264,9 +402,9 @@ def afficher_analyse_depenses():
         pourcentage = (difference / mois_precedent) * 100
         
         if difference > 0:
-            st.error(f"📈 Vos dépenses ont augmenté de **{difference:,.2f} $** (+{pourcentage:.1f}%) par rapport au mois dernier.".replace(",", " "))
+            st.error(f"📈 Vos dépenses ont augmenté de **{format_currency(difference)}** (+{pourcentage:.1f}%) par rapport au mois dernier.")
         elif difference < 0:
-            st.success(f"📉 Vos dépenses ont diminué de **{abs(difference):,.2f} $** ({pourcentage:.1f}%) par rapport au mois dernier. Bravo !".replace(",", " "))
+            st.success(f"📉 Vos dépenses ont diminué de **{format_currency(abs(difference))}** ({pourcentage:.1f}%) par rapport au mois dernier. Bravo !")
         else:
             st.info("⚖️ Vos dépenses sont exactement les mêmes que le mois dernier.")
             
@@ -322,110 +460,182 @@ def afficher_analyse_depenses():
     fig.update_traces(textposition='inside', textinfo='percent+label')
     fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True)
     st.plotly_chart(fig, use_container_width=True)
-
-
-def afficher_allocation_actifs():
-    st.title("📊 Allocation d'Actifs selon l'Âge")
-    st.markdown("Découvrez la répartition recommandée de votre portefeuille basée sur votre âge.")
-
-    # Données d'allocation par âge
-    allocations = {
-        25: {"Cash": 35, "Obligations": 0, "Immobilier": 0, "Actifs Alternatifs": 0, "Actions": 65},
-        30: {"Cash": 10, "Obligations": 5, "Immobilier": 35, "Actifs Alternatifs": 0, "Actions": 50},
-        35: {"Cash": 15, "Obligations": 5, "Immobilier": 30, "Actifs Alternatifs": 5, "Actions": 45},
-        40: {"Cash": 15, "Obligations": 10, "Immobilier": 25, "Actifs Alternatifs": 10, "Actions": 40},
-        45: {"Cash": 10, "Obligations": 10, "Immobilier": 25, "Actifs Alternatifs": 15, "Actions": 40},
-        50: {"Cash": 10, "Obligations": 15, "Immobilier": 25, "Actifs Alternatifs": 20, "Actions": 30},
-        55: {"Cash": 5, "Obligations": 25, "Immobilier": 20, "Actifs Alternatifs": 20, "Actions": 30},
-        60: {"Cash": 5, "Obligations": 30, "Immobilier": 20, "Actifs Alternatifs": 20, "Actions": 25},
-    }
-
-    niveaux_risque = {
-        "Cash": "Très Faible",
-        "Obligations": "Faible",
-        "Immobilier": "Moyen",
-        "Actifs Alternatifs": "Moyen",
-        "Actions": "Élevé"
-    }
-
-    st.subheader("👤 Entrez votre âge")
-    age = st.slider("Âge", min_value=18, max_value=80, value=30)
-
-    def get_age_bracket(age):
-        if age < 28: return 25
-        elif age < 33: return 30
-        elif age < 38: return 35
-        elif age < 43: return 40
-        elif age < 48: return 45
-        elif age < 53: return 50
-        elif age < 58: return 55
-        else: return 60
-
-    tranche = get_age_bracket(age)
-    allocation = allocations[tranche]
-
-    if tranche == 60:
-        st.info(f"📌 Tranche d'âge : **60 ans et plus**")
-    else:
-        st.info(f"📌 Tranche d'âge : **environ {tranche} ans**")
-
-    st.subheader("🥧 Votre Allocation Recommandée")
-
-    df = pd.DataFrame({
-        "Classe d'Actifs": list(allocation.keys()),
-        "Pourcentage": list(allocation.values()),
-        "Niveau de Risque": [niveaux_risque[k] for k in allocation.keys()]
-    })
-
-    df = df[df["Pourcentage"] > 0]
-
-    colors = {
-        "Cash": "#2ecc71",
-        "Obligations": "#3498db",
-        "Immobilier": "#9b59b6",
-        "Actifs Alternatifs": "#f39c12",
-        "Actions": "#e74c3c"
-    }
-
-    fig = px.pie(
-        df, 
-        values="Pourcentage", 
-        names="Classe d'Actifs",
-        color="Classe d'Actifs",
-        color_discrete_map=colors,
-        hole=0.4
-    )
-
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-    fig.update_layout(
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.2),
-        margin=dict(t=20, b=20, l=20, r=20)
-    )
-
-    st.plotly_chart(fig, width='stretch')
-
-    st.subheader("📋 Détail de l'Allocation")
-
-    df_table = pd.DataFrame({
-        "Classe d'Actifs": list(allocation.keys()),
-        "Pourcentage": [f"{v}%" for v in allocation.values()],
-        "Niveau de Risque": [niveaux_risque[k] for k in allocation.keys()]
-    })
-
-    st.dataframe(df_table, width='stretch', hide_index=True)
-
+    
     st.markdown("---")
-    st.caption("""
-    💡 **Note** : Ces allocations sont des recommandations générales basées sur l'âge. 
-    Votre situation personnelle peut nécessiter une allocation différente. Consultez un conseiller.
-    """)
+    st.subheader("📉 Évolution du Budget Restant & Comparaison Globale")
+    
+    budget_cible = st.number_input("Entrez votre budget de dépenses global (pour analyse) :", min_value=0.0, value=2500.0, step=100.0)
+    
+    col_c1, col_c2 = st.columns(2)
+    
+    total_depense = df["Montant"].sum()
+    
+    with col_c1:
+        # Graphique Budget vs Dépensé
+        df_comparatif = pd.DataFrame({
+            "Catégorie": ["Budget Cible", "Dépenses Cumu."],
+            "Montant": [budget_cible, total_depense]
+        })
+        fig_comp = px.bar(
+            df_comparatif, 
+            x="Catégorie", 
+            y="Montant", 
+            color="Catégorie",
+            title="Budget Fixé vs Dépensé à ce jour",
+            color_discrete_map={"Budget Cible": "#3498db", "Dépenses Cumu.": "#e74c3c" if total_depense > budget_cible else "#f39c12"},
+            text_auto=True
+        )
+        if budget_cible > 0:
+            fig_comp.add_hline(y=budget_cible, line_dash="dash", line_color="green", annotation_text="Limite")
+        fig_comp.update_layout(showlegend=False, margin=dict(t=30, b=10, l=10, r=10))
+        st.plotly_chart(fig_comp, use_container_width=True)
+        
+    with col_c2:
+        # Évolution du capital restant chronologique
+        df_chrono = df.groupby("Date")["Montant"].sum().reset_index()
+        df_chrono["Date"] = pd.to_datetime(df_chrono["Date"])
+        df_chrono = df_chrono.sort_values(by="Date")
+        
+        df_chrono["Dépenses_Cumulées"] = df_chrono["Montant"].cumsum()
+        df_chrono["Capital_Restant"] = budget_cible - df_chrono["Dépenses_Cumulées"]
+        
+        fig_evol = px.line(
+            df_chrono, 
+            x="Date", 
+            y="Capital_Restant",
+            markers=True,
+            title="Évolution du Budget Restant au jour le jour"
+        )
+        fig_evol.add_hline(y=0, line_dash="solid", line_color="#e74c3c", annotation_text="Déficit 0$")
+        fig_evol.update_traces(line_color="#2ecc71", line_width=3, marker_size=8, marker_color="#27ae60")
+        fig_evol.update_layout(margin=dict(t=30, b=10, l=10, r=10))
+        st.plotly_chart(fig_evol, use_container_width=True)
+
+
+def afficher_simulateurs():
+    st.title("🔮 Simulateurs & Projections")
+    st.markdown("Projetez votre avenir financier et optimisez vos investissements.")
+    
+    onglet1, onglet2 = st.tabs(["📈 Épargne & Intérêts", "📦 Modèle de Portefeuille"])
+    
+    with onglet1:
+        st.subheader("Simulateur d'Intérêts Composés")
+        col_s1, col_s2, col_s3 = st.columns(3)
+        with col_s1:
+            capital_initial = st.number_input("Capital Initial ($)", min_value=0.0, value=1000.0, step=100.0)
+        with col_s2:
+            versement_mensuel = st.number_input("Versement Mensuel ($)", min_value=0.0, value=200.0, step=10.0)
+        with col_s3:
+            taux_annuel = st.number_input("Taux d'Intérêt Annuel (%)", min_value=0.0, max_value=20.0, value=5.0, step=0.5)
+            
+        annees = st.slider("Durée de projection (Années)", min_value=1, max_value=40, value=10)
+        
+        mois = annees * 12
+        taux_mensuel = (taux_annuel / 100) / 12
+        capital_courant = capital_initial
+        capital_investi = capital_initial
+        donnees_projection = [{"Année": 0, "Capital Investi": capital_investi, "Intérêts Générés": 0.0, "Total": capital_courant}]
+        
+        for m in range(1, mois + 1):
+            interets_mois = capital_courant * taux_mensuel
+            capital_courant += interets_mois + versement_mensuel
+            capital_investi += versement_mensuel
+            
+            if m % 12 == 0:
+                donnees_projection.append({
+                    "Année": m // 12,
+                    "Capital Investi": capital_investi,
+                    "Intérêts Générés": capital_courant - capital_investi,
+                    "Total": capital_courant
+                })
+                
+        import pandas as pd
+        df_proj = pd.DataFrame(donnees_projection)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_r1, col_r2, col_r3 = st.columns(3)
+        col_r1.metric("Montant Final Estimé", format_currency(capital_courant))
+        col_r2.metric("Total Investi", format_currency(capital_investi))
+        col_r3.metric("Intérêts Gagnés", format_currency(capital_courant - capital_investi), delta="Profit")
+        
+        import plotly.express as px
+        fig_proj = px.bar(
+            df_proj, 
+            x="Année", 
+            y=["Capital Investi", "Intérêts Générés"],
+            title="Croissance de votre épargne dans le temps",
+            labels={"value": "Montant Cumulé ($)", "variable": "Composante"},
+            barmode="stack",
+            color_discrete_map={"Capital Investi": "#3498db", "Intérêts Générés": "#2ecc71"}
+        )
+        fig_proj.update_layout(margin=dict(t=30, b=10, l=10, r=10))
+        st.plotly_chart(fig_proj, use_container_width=True)
+
+    with onglet2:
+        st.subheader("Allocation d'Actifs Idéale")
+        st.markdown("Découvrez la répartition recommandée pour votre portefeuille.")
+        
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            montant_k = st.number_input("Montant total à investir ($)", min_value=0.0, value=10000.0, step=1000.0)
+        with col_p2:
+            age = st.slider("Âge pour le modèle", min_value=18, max_value=80, value=30)
+            
+        allocations = {
+            25: {"Cash": 5, "Obligations": 5, "Immobilier": 10, "Actions": 80},
+            30: {"Cash": 5, "Obligations": 10, "Immobilier": 15, "Actions": 70},
+            35: {"Cash": 5, "Obligations": 15, "Immobilier": 20, "Actions": 60},
+            40: {"Cash": 10, "Obligations": 20, "Immobilier": 20, "Actions": 50},
+            45: {"Cash": 10, "Obligations": 25, "Immobilier": 25, "Actions": 40},
+            50: {"Cash": 10, "Obligations": 30, "Immobilier": 25, "Actions": 35},
+            55: {"Cash": 10, "Obligations": 35, "Immobilier": 25, "Actions": 30},
+            60: {"Cash": 15, "Obligations": 40, "Immobilier": 25, "Actions": 20},
+        }
+        
+        # Calculate appropriate tranche
+        tranche = 60 if age >= 60 else max([k for k in allocations.keys() if k <= age]) if age >= 25 else 25
+        allocation = allocations[tranche]
+
+        st.info(f"📌 Profil basé sur la tranche d'âge : **{tranche} ans et plus**")
+
+        df_alloc = pd.DataFrame({
+            "Classe d'Actifs": list(allocation.keys()),
+            "Pourcentage": list(allocation.values()),
+            "Montant Cible": [(v/100.0)*montant_k for v in allocation.values()]
+        })
+        
+        df_alloc = df_alloc[df_alloc["Pourcentage"] > 0]
+
+        colors = {"Cash": "#2ecc71", "Obligations": "#3498db", "Immobilier": "#9b59b6", "Actions": "#e74c3c"}
+        
+        col_g1, col_g2 = st.columns([1, 1])
+        with col_g1:
+            fig_alloc = px.pie(
+                df_alloc, 
+                values="Pourcentage", 
+                names="Classe d'Actifs",
+                color="Classe d'Actifs",
+                color_discrete_map=colors,
+                hole=0.4
+            )
+            fig_alloc.update_traces(textposition='inside', textinfo='percent+label')
+            fig_alloc.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10))
+            st.plotly_chart(fig_alloc, use_container_width=True)
+
+        with col_g2:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            df_table = df_alloc.copy()
+            df_table["Pourcentage (%)"] = df_table["Pourcentage"].map("{:.1f}%".format)
+            df_table["Cible Monétaire"] = df_table["Montant Cible"].apply(format_currency)
+            st.dataframe(df_table[["Classe d'Actifs", "Pourcentage (%)", "Cible Monétaire"]], hide_index=True, use_container_width=True)
+
+        st.caption("💡 **Note** : Ces allocations sont des recommandations générales. Consultez un conseiller pour un plan personnalisé.")
 
 # --- Navigation ---
 st.sidebar.title("Navigation")
 menu = st.sidebar.radio(
     "Aller à :",
-    ("Tableau de Bord", "Budget Mensuel", "Suivi des Dépenses", "Analyse des Dépenses", "Allocation d'Actifs")
+    ("Tableau de Bord", "Budget Mensuel", "Suivi des Dépenses", "Analyse des Dépenses", "Simulateurs & Projections")
 )
 
 if menu == "Tableau de Bord":
@@ -436,5 +646,5 @@ elif menu == "Suivi des Dépenses":
     afficher_suivi_depenses()
 elif menu == "Analyse des Dépenses":
     afficher_analyse_depenses()
-elif menu == "Allocation d'Actifs":
-    afficher_allocation_actifs()
+elif menu == "Simulateurs & Projections":
+    afficher_simulateurs()
