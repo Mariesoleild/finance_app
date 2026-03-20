@@ -238,6 +238,92 @@ def afficher_suivi_depenses():
     else:
         st.info("Aucune dépense enregistrée pour le moment. Utilisez le formulaire ci-dessus pour en ajouter une.")
 
+def afficher_analyse_depenses():
+    st.title("📊 Analyse des Dépenses")
+    st.markdown("Comprenez où part votre argent et analysez vos habitudes.")
+    
+    if 'depenses_list' not in st.session_state or st.session_state.depenses_list.empty:
+        st.info("⚠️ Vous n'avez pas encore enregistré de dépenses. Allez dans l'onglet 'Suivi des Dépenses' pour commencer.")
+        return
+        
+    df = st.session_state.depenses_list.copy()
+    
+    # 1. Comparaison mois précédent
+    st.subheader("📅 Comparaison au mois précédent")
+    
+    col1, col2 = st.columns(2)
+    mois_actuel_total = df["Montant"].sum()
+    
+    with col1:
+        st.metric("Total des dépenses ce mois-ci", f"{mois_actuel_total:,.2f} $".replace(",", " "))
+    with col2:
+        mois_precedent = st.number_input("Entrez le total de vos dépenses du mois précédent ($)", min_value=0.0, value=0.0, step=50.0)
+        
+    if mois_precedent > 0:
+        difference = mois_actuel_total - mois_precedent
+        pourcentage = (difference / mois_precedent) * 100
+        
+        if difference > 0:
+            st.error(f"📈 Vos dépenses ont augmenté de **{difference:,.2f} $** (+{pourcentage:.1f}%) par rapport au mois dernier.".replace(",", " "))
+        elif difference < 0:
+            st.success(f"📉 Vos dépenses ont diminué de **{abs(difference):,.2f} $** ({pourcentage:.1f}%) par rapport au mois dernier. Bravo !".replace(",", " "))
+        else:
+            st.info("⚖️ Vos dépenses sont exactement les mêmes que le mois dernier.")
+            
+    st.markdown("---")
+    
+    col_a1, col_a2 = st.columns(2)
+    
+    with col_a1:
+        # 2. Top 5 des dépenses
+        st.subheader("🏆 Top 5 de vos dépenses")
+        top_5 = df.nlargest(5, "Montant")[["Catégorie", "Description", "Montant"]]
+        
+        st.dataframe(
+            top_5, 
+            use_container_width=True,
+            column_config={
+                "Montant": st.column_config.NumberColumn("Montant ($)", format="%.2f $")
+            },
+            hide_index=True
+        )
+
+    with col_a2:
+        # 3. Pourcentage par catégorie (Tableau)
+        st.subheader("🔢 Pourcentages par Catégorie")
+        df_cat = df.groupby("Catégorie")["Montant"].sum().reset_index()
+        df_cat["Pourcentage"] = (df_cat["Montant"] / df_cat["Montant"].sum()) * 100
+        df_cat = df_cat.sort_values(by="Montant", ascending=False)
+        
+        df_display = df_cat.copy()
+        df_display["Pourcentage"] = df_display["Pourcentage"].map("{:.1f}%".format)
+        
+        st.dataframe(
+            df_display,
+            use_container_width=True,
+            column_config={
+                "Montant": st.column_config.NumberColumn("Total", format="%.2f $"),
+                "Pourcentage": st.column_config.TextColumn("Part (%)")
+            },
+            hide_index=True
+        )
+        
+    st.markdown("---")
+    
+    # 4. Graphique détaillé par catégorie
+    st.subheader("🥧 Répartition Visuelle")
+    fig = px.pie(
+        df_cat, 
+        values="Montant", 
+        names="Catégorie", 
+        hole=0.4,
+        color_discrete_sequence=px.colors.qualitative.Set3
+    )
+    fig.update_traces(textposition='inside', textinfo='percent+label')
+    fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True)
+    st.plotly_chart(fig, use_container_width=True)
+
+
 def afficher_allocation_actifs():
     st.title("📊 Allocation d'Actifs selon l'Âge")
     st.markdown("Découvrez la répartition recommandée de votre portefeuille basée sur votre âge.")
@@ -339,7 +425,7 @@ def afficher_allocation_actifs():
 st.sidebar.title("Navigation")
 menu = st.sidebar.radio(
     "Aller à :",
-    ("Tableau de Bord", "Budget Mensuel", "Suivi des Dépenses", "Allocation d'Actifs")
+    ("Tableau de Bord", "Budget Mensuel", "Suivi des Dépenses", "Analyse des Dépenses", "Allocation d'Actifs")
 )
 
 if menu == "Tableau de Bord":
@@ -348,5 +434,7 @@ elif menu == "Budget Mensuel":
     afficher_budget_mensuel()
 elif menu == "Suivi des Dépenses":
     afficher_suivi_depenses()
+elif menu == "Analyse des Dépenses":
+    afficher_analyse_depenses()
 elif menu == "Allocation d'Actifs":
     afficher_allocation_actifs()
