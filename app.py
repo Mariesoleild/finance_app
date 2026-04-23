@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+import numpy as np
+import time
 
 # --- Configuration de la page ---
 st.set_page_config(page_title="Finances Personnelles", page_icon="", layout="wide")
@@ -14,40 +17,51 @@ st.markdown("""
     html, body, [class*="css"] {
         font-family: 'DM Sans', sans-serif;
     }
-    
-    /* Fond global crème doux */
+    /* Fond global chaleureux (Chic & Cozy) */
     .stApp {
-        background: linear-gradient(160deg, #FAF7F2 0%, #F3EDE4 50%, #EEF2EE 100%);
+        background: linear-gradient(160deg, #FDFBF7 0%, #F8F4ED 50%, #F2EFE9 100%);
     }
     
-    /* Ajustement de l'espacement principal */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-
-    /* Barre latérale — sauge très pâle */
+    /* Barre latérale — Sable & Lin */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #F0EDE6 0%, #E8E3D8 100%);
-        border-right: 1px solid #D5CDBE;
+        background: #F2EFE9;
+        border-right: 1px solid #E6DFD3;
+    }
+    
+    /* Boutons de Navigation (Onglets de section) — Vert Plus Foncé */
+    [data-testid="stSidebar"] .stButton>button {
+        background: #8FA578; /* Vert sauge plus soutenu */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-bottom: 5px;
+        box-shadow: 0 2px 4px rgba(143, 165, 120, 0.2);
+    }
+    [data-testid="stSidebar"] .stButton>button:hover {
+        background: #7A9466; /* Encore plus foncé au survol */
+        color: white;
+        transform: translateX(3px);
+        box-shadow: 0 4px 8px rgba(143, 165, 120, 0.3);
     }
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
     [data-testid="stSidebar"] label {
-        color: #4A5043;
+        color: #5C6275;
     }
     
-    /* Cartes indicateurs (Metrics) */
+    /* Cartes indicateurs (Metrics) — Chaleureuses */
     div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #FFFFFF 0%, #FDFBF7 100%);
-        border-radius: 16px;
+        background: white;
+        border-radius: 12px;
         padding: 18px 22px;
-        box-shadow: 0 2px 12px rgba(138, 131, 116, 0.08), 0 1px 3px rgba(138, 131, 116, 0.06);
+        box-shadow: 0 4px 15px rgba(138, 131, 116, 0.05);
         border: 1px solid #E6DFD3;
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        transition: all 0.3s ease;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(138, 131, 116, 0.12), 0 3px 8px rgba(138, 131, 116, 0.08);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(138, 131, 116, 0.1);
     }
     
     [data-testid="stMetricValue"] {
@@ -56,75 +70,83 @@ st.markdown("""
         color: #3D405B;
     }
     [data-testid="stMetricLabel"] {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 600;
-        color: #7C8172;
+        color: #9A8C73; /* Sable profond */
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.05em;
     }
 
-    /* Boutons — sauge doux */
+    /* Boutons — Sable Doré (Action Chaleureuse) */
     .stButton>button {
-        background: linear-gradient(135deg, #A3B18A 0%, #8FA578 100%);
-        color: #FDFBF7;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #D4A373 0%, #B88E62 100%);
+        color: white;
+        border-radius: 8px;
         font-weight: 600;
         padding: 0.55rem 1.2rem;
         border: none;
-        box-shadow: 0 4px 10px rgba(143, 165, 120, 0.25);
+        box-shadow: 0 4px 12px rgba(212, 163, 115, 0.25);
         transition: all 0.3s ease;
-        letter-spacing: 0.02em;
     }
     .stButton>button:hover {
-        background: linear-gradient(135deg, #8FA578 0%, #7A9466 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(143, 165, 120, 0.35);
-        color: #FDFBF7;
+        background: linear-gradient(135deg, #B88E62 0%, #A07B55 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(212, 163, 115, 0.35);
+        color: white;
     }
     
-    /* Titres — bleu-gris profond */
+    /* Titres — Gris Bleu Profond (pour le contraste) */
     h1, h2, h3 {
         color: #3D405B;
-    }
-    h1 {
-        font-weight: 700;
+        letter-spacing: -0.01em;
     }
     
-    /* Tableaux modernes */
-    [data-testid="stDataFrame"] {
-        box-shadow: 0 2px 10px rgba(138, 131, 116, 0.08);
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    /* Dividers plus doux */
-    hr {
-        border-color: #DDD6C8 !important;
-        opacity: 0.6;
-    }
-
-    /* Expanders */
-    [data-testid="stExpander"] {
-        background-color: #FDFBF7;
-        border-radius: 12px;
-        border: 1px solid #E6DFD3;
-    }
-
-    /* Progress bar — sauge */
+    /* Progress bar — Sable vers Sauge */
     .stProgress > div > div > div {
-        background: linear-gradient(90deg, #A3B18A, #457B9D) !important;
+        background: linear-gradient(90deg, #D4A373, #A3B18A) !important;
     }
 
     /* Tabs */
     .stTabs [data-baseweb="tab"] {
-        color: #7C8172;
-        font-weight: 500;
+        color: #9A8C73;
     }
     .stTabs [aria-selected="true"] {
         color: #3D405B;
-        font-weight: 700;
-        border-bottom-color: #A3B18A !important;
+        border-bottom-color: #D4A373 !important;
     }
+
+    /* Onboarding Cards — Style Sable & Sauge */
+    .onboarding-card {
+        background: white;
+        border-left: 4px solid #D4A373;
+        border-radius: 8px;
+        padding: 24px;
+        margin: 16px 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid #E6DFD3;
+        color: #3D405B;
+    }
+    .onboarding-card h4 {
+        color: #3D405B;
+        margin-bottom: 6px;
+    }
+    .onboarding-card p {
+        color: #5C6275;
+    }
+
+    /* Classes de Section Color-codées */
+    .section-revenus { border-left: 3px solid #E9C46A; padding-left: 16px; margin-bottom: 25px; }
+    .section-revenus h3 { color: #B08D3E !important; }
+    
+    .section-fixes { border-left: 3px solid #98A6BB; padding-left: 16px; margin-bottom: 25px; }
+    .section-fixes h3 { color: #6C7A8F !important; }
+    
+    .section-variables { border-left: 3px solid #D4A373; padding-left: 16px; margin-bottom: 25px; }
+    .section-variables h3 { color: #A87D52 !important; }
+    
+    .section-epargne { border-left: 3px solid #A3B18A; padding-left: 16px; margin-bottom: 25px; }
+    .section-epargne h3 { color: #7A8D63 !important; }
+</style>
 </style>
 """, unsafe_allow_html=True)
 
@@ -160,54 +182,98 @@ def charger_donnees_budget():
             for cle, valeur in donnees.items():
                 st.session_state[cle] = valeur
 
-if 'depenses_list' not in st.session_state:
-    st.session_state.depenses_list = pd.DataFrame(columns=["Date", "Catégorie", "Description", "Montant"])
-if 'categories_list' not in st.session_state:
-    st.session_state.categories_list = ["Nourriture", "Transport", "Loyer", "Loisirs", "Santé", "Vêtements", "Factures", "Autre"]
-if 'monthly_targets' not in st.session_state:
-    st.session_state.monthly_targets = {}
-if 'budget_historique' not in st.session_state:
-    st.session_state.budget_historique = [] # Liste de dicts: [{"mois": "2026-04", "revenus": ..., ...}]
-if 'custom_fixed_categories' not in st.session_state:
-    st.session_state.custom_fixed_categories = [] # Liste de dicts {"nom": "", "montant": 0.0}
-if 'custom_variable_categories' not in st.session_state:
-    st.session_state.custom_variable_categories = [] # Liste de dicts {"nom": "", "montant": 0.0}
-if 'custom_savings_categories' not in st.session_state:
-    st.session_state.custom_savings_categories = [] # Liste de dicts {"nom": "", "montant": 0.0}
-if 'taxes_annuelles' not in st.session_state:
-    st.session_state.taxes_annuelles = 0.0
-if 'permis_annuels' not in st.session_state:
-    st.session_state.permis_annuels = 0.0
-if 'entretien_annuel' not in st.session_state:
-    st.session_state.entretien_annuel = 0.0
-if 'autres_annuels_val' not in st.session_state:
-    st.session_state.autres_annuels_val = 0.0
-if 'custom_annual_categories' not in st.session_state:
-    st.session_state.custom_annual_categories = [] # Liste de dicts {"nom": "", "montant": 0.0}
-
-# Chiffres du budget mensuel
-if 'revenus_mensuels' not in st.session_state: st.session_state.revenus_mensuels = 0.0
-if 'loyer_mensuel' not in st.session_state: st.session_state.loyer_mensuel = 0.0
-if 'telephone_internet' not in st.session_state: st.session_state.telephone_internet = 0.0
-if 'transport_mensuel' not in st.session_state: st.session_state.transport_mensuel = 0.0
-if 'assurances_mensuel' not in st.session_state: st.session_state.assurances_mensuel = 0.0
-if 'electricite_mensuel' not in st.session_state: st.session_state.electricite_mensuel = 0.0
-if 'nourriture_mensuel' not in st.session_state: st.session_state.nourriture_mensuel = 0.0
-if 'loisirs_mensuel' not in st.session_state: st.session_state.loisirs_mensuel = 0.0
-if 'celi_mensuel' not in st.session_state: st.session_state.celi_mensuel = 0.0
-if 'celiapp_mensuel' not in st.session_state: st.session_state.celiapp_mensuel = 0.0
-if 'reer_mensuel' not in st.session_state: st.session_state.reer_mensuel = 0.0
-
-# Charger les données sauvegardées une seule fois au démarrage
+# --- Initialisation du Session State avec SCÉNARIO RÉALISTE (DÉMO) ---
 if 'budget_initialise' not in st.session_state:
-    charger_donnees_budget()
+    # 1. Revenus et Budget Actuel (Avril 2026)
+    st.session_state.revenus_mensuels = 4050.0
+    st.session_state.loyer_mensuel = 1450.0
+    st.session_state.telephone_internet = 110.0
+    st.session_state.transport_mensuel = 320.0
+    st.session_state.assurances_mensuel = 165.0
+    st.session_state.electricite_mensuel = 78.0
+    st.session_state.nourriture_mensuel = 520.0
+    st.session_state.loisirs_mensuel = 260.0
+    
+    # Dépenses variables personnalisées
+    st.session_state.custom_variable_categories = [
+        {"nom": "Vêtements / Magasinage", "montant": 140.0},
+        {"nom": "Santé / Pharmacie", "montant": 60.0},
+        {"nom": "Café / Restaurants", "montant": 130.0}
+    ]
+    st.session_state.custom_fixed_categories = []
+    
+    # 2. Épargne
+    st.session_state.celi_mensuel = 250.0
+    st.session_state.celiapp_mensuel = 300.0
+    st.session_state.reer_mensuel = 150.0
+    st.session_state.custom_savings_categories = [
+        {"nom": "Fonds d'urgence", "montant": 100.0}
+    ]
+    
+    # 3. Prévoyance Annuelle
+    st.session_state.taxes_annuelles = 0.0
+    st.session_state.permis_annuels = 320.0
+    st.session_state.entretien_annuel = 950.0
+    st.session_state.autres_annuels_val = 0.0
+    st.session_state.custom_annual_categories = [
+        {"nom": "Cadeaux / Fêtes", "montant": 700.0},
+        {"nom": "Vacances / Voyage", "montant": 1800.0},
+        {"nom": "Renouvellements / Abonnements", "montant": 250.0},
+        {"nom": "Autres frais annuels", "montant": 450.0}
+    ]
+
+    # 4. Catégories et Listes
+    st.session_state.categories_list = ["Nourriture", "Transport", "Loyer", "Loisirs", "Santé", "Vêtements", "Factures", "Restaurants", "Abonnements", "Autre"]
+    st.session_state.monthly_targets = {}
+    
+    # 5. Historique (Archives pour montrer l'évolution)
+    st.session_state.budget_historique = [
+        {"mois": "2026-01", "revenus": 4050.0, "depenses_fixes": 2123.0, "depenses_variables": 1350.0, "epargne": 500.0, "total_sorties": 3973.0, "restant": 77.0},
+        {"mois": "2026-02", "revenus": 4050.0, "depenses_fixes": 2123.0, "depenses_variables": 920.0, "epargne": 900.0, "total_sorties": 3943.0, "restant": 107.0},
+        {"mois": "2026-03", "revenus": 4050.0, "depenses_fixes": 2123.0, "depenses_variables": 1580.0, "epargne": 300.0, "total_sorties": 4003.0, "restant": 47.0},
+        {"mois": "2026-04", "revenus": 4050.0, "depenses_fixes": 2123.0, "depenses_variables": 1110.0, "epargne": 800.0, "total_sorties": 4033.0, "restant": 17.0},
+        {"mois": "2026-05", "revenus": 4050.0, "depenses_fixes": 2123.0, "depenses_variables": 1050.0, "epargne": 800.0, "total_sorties": 3973.0, "restant": 77.0}
+    ]
+    
+    # 6. Suivi des Dépenses (Détail d'Avril 2026)
+    demo_expenses = [
+        {"Date": "2026-04-01", "Catégorie": "Loyer", "Description": "Virement Loyer", "Montant": 1450.0},
+        {"Date": "2026-04-02", "Catégorie": "Nourriture", "Description": "Épicerie Metro", "Montant": 142.50},
+        {"Date": "2026-04-03", "Catégorie": "Transport", "Description": "Essence Shell", "Montant": 68.0},
+        {"Date": "2026-04-04", "Catégorie": "Restaurants", "Description": "Sushi soir", "Montant": 55.40},
+        {"Date": "2026-04-05", "Catégorie": "Loisirs", "Description": "Cinéma & Popcorn", "Montant": 28.0},
+        {"Date": "2026-04-07", "Catégorie": "Restaurants", "Description": "Café et muffin", "Montant": 12.75},
+        {"Date": "2026-04-08", "Catégorie": "Factures", "Description": "Vidéotron - Tél/Web", "Montant": 110.0},
+        {"Date": "2026-04-10", "Catégorie": "Nourriture", "Description": "Épicerie Costco", "Montant": 215.30},
+        {"Date": "2026-04-12", "Catégorie": "Assurances", "Description": "Assurance Auto/Logis", "Montant": 165.0},
+        {"Date": "2026-04-14", "Catégorie": "Santé", "Description": "Pharmacie Jean Coutu", "Montant": 42.15},
+        {"Date": "2026-04-15", "Catégorie": "Factures", "Description": "Hydro-Québec", "Montant": 78.0},
+        {"Date": "2026-04-16", "Catégorie": "Vêtements", "Description": "Achat Simons", "Montant": 140.0},
+        {"Date": "2026-04-18", "Catégorie": "Restaurants", "Description": "Souper resto Italien", "Montant": 85.20},
+        {"Date": "2026-04-19", "Catégorie": "Transport", "Description": "Stationnement Indigo", "Montant": 22.0},
+        {"Date": "2026-04-20", "Catégorie": "Nourriture", "Description": "Épicerie IGA", "Montant": 95.40},
+        {"Date": "2026-04-21", "Catégorie": "Abonnements", "Description": "Spotify / Netflix", "Montant": 32.50},
+        {"Date": "2026-04-22", "Catégorie": "Restaurants", "Description": "Lunch rapide", "Montant": 18.25},
+        {"Date": "2026-04-23", "Catégorie": "Loisirs", "Description": "Escalade / Gym", "Montant": 25.0},
+        {"Date": "2026-04-25", "Catégorie": "Transport", "Description": "Bus / Passe mensuelle", "Montant": 92.0},
+        {"Date": "2026-04-27", "Catégorie": "Nourriture", "Description": "Épicerie vrac", "Montant": 43.10},
+        {"Date": "2026-04-28", "Catégorie": "Santé", "Description": "Dentiste (nettoyage)", "Montant": 180.0},
+        {"Date": "2026-04-29", "Catégorie": "Restaurants", "Description": "Pizza livraison", "Montant": 34.50},
+        {"Date": "2026-04-30", "Catégorie": "Abonnements", "Description": "iCloud / Google Drive", "Montant": 15.0}
+    ]
+    st.session_state.depenses_list = pd.DataFrame(demo_expenses)
+    st.session_state.depenses_list['Date'] = pd.to_datetime(st.session_state.depenses_list['Date']).dt.date
+    
+    # Flag d'initialisation
     st.session_state.budget_initialise = True
+
+
 
 # --- Moteur d'Intelligence Financière ---
 def obtenir_conseils_financiers(df_mois, budget_max, total_initial_dep):
     conseils = []
     if df_mois.empty:
-        return ["Commencez à saisir vos dépenses pour recevoir des conseils personnalisés !"]
+        return ["Commencez à saisir vos dépenses pour recevoir des conseils personnalisés."]
     
     # On utilise le total des dépenses réelles du tracker
     total_dep_reelles = df_mois["Montant"].sum()
@@ -220,7 +286,7 @@ def obtenir_conseils_financiers(df_mois, budget_max, total_initial_dep):
     if any(df_cat['Catégorie'].isin(["Nourriture", "Restaurants"])):
         montant_bouffe = df_cat[df_cat['Catégorie'].isin(["Nourriture", "Restaurants"])]['Montant'].sum()
         if montant_bouffe > (total_dep_reelles * 0.3):
-            conseils.append(f"🍔 **Tu dépenses beaucoup en nourriture/restaurations** ({format_currency(montant_bouffe)}). Essaye de cuisiner un peu plus cette semaine !")
+            conseils.append(f"Vous dépensez beaucoup en nourriture/restaurations ({format_currency(montant_bouffe)}). Essayez de cuisiner un peu plus cette semaine.")
 
     # Suggestion d'économie (Potentiel concret)
     if top_cat['Montant'] > 200 and top_cat['Catégorie'] not in ["Loyer", "Factures"]:
@@ -240,17 +306,16 @@ def obtenir_conseils_financiers(df_mois, budget_max, total_initial_dep):
         if ratio_budget > ratio_temps + 0.15:
             conseils.append(f"**Attention dépassement imminent** : Tu as déjà utilisé {ratio_budget:.0%} de ton budget alors qu'on est qu'au jour {jours_ecoules} du mois.")
 
-    return conseils if conseils else ["Ta gestion est exemplaire ce mois-ci ! Rien à signaler. 👍"]
+    return conseils if conseils else ["Votre gestion est exemplaire ce mois-ci. Aucun dépassement à signaler."]
 
 # --- Fonctions des pages ---
 
 def afficher_tableau_de_bord():
     st.title("Tableau de Bord")
     st.markdown(
-        "**Bienvenue dans votre espace de Finances Personnelles.**\n\n"
-        "Gérez tout votre argent au même endroit. Ce *Tableau de Bord* vous donne un aperçu immédiat de l'évolution de votre budget mensuel. "
-        "Pour aller plus loin, utilisez le menu afin de détailler vos comptes, suivre vos dépenses quotidiennes et estimer vos projets futurs.\n\n"
-        "👉 **Pour démarrer :** indiquez vos revenus et la limite de votre budget dans le panneau de gauche."
+        "**Bienvenue dans votre espace de finances personnelles.**\n\n"
+        "Suivez en un coup d’œil vos revenus, vos dépenses et l’argent qu’il vous reste ce mois-ci. Utilisez le menu pour gérer votre budget, enregistrer vos dépenses et analyser vos habitudes financières.\n\n"
+        "Commencez par entrer vos revenus et votre budget mensuel dans le panneau de gauche."
     )
     
     # Section des entrées de données dans la Sidebar
@@ -283,15 +348,32 @@ def afficher_tableau_de_bord():
     else:
         progression = 0.0 if depenses == 0 else 1.0
     
+    # --- État vide (Aucune donnée) ---
+    is_empty = (revenus == 0 and depenses == 0)
+    if is_empty:
+        st.markdown("""
+        <div class="onboarding-card">
+            <h4>Aucune donnée financière</h4>
+            <p>Ajoutez vos revenus et votre budget mensuel dans la section dédiée pour voir votre tableau de bord s'actualiser automatiquement.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # --- Variables d'affichage conditionnel ---
+    aff_revenus = "-" if is_empty else format_currency(revenus)
+    aff_depenses = "-" if is_empty else format_currency(depenses)
+    aff_restant = "-" if is_empty else format_currency(restant)
+    del_depenses = None if is_empty else format_currency(-depenses)
+    del_restant = None if is_empty else format_currency(restant)
+
     # --- Métriques ---
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("Revenus du mois", format_currency(revenus))
+        st.metric("Revenus du mois", aff_revenus)
     with col2:
-        st.metric("Dépenses totales", format_currency(depenses), delta=format_currency(-depenses), delta_color="inverse")
+        st.metric("Dépenses totales", aff_depenses, delta=del_depenses, delta_color="inverse")
     with col3:
-        st.metric("Argent restant", format_currency(restant), delta=format_currency(restant), delta_color="normal")
+        st.metric("Argent restant", aff_restant, delta=del_restant, delta_color="normal")
         
     st.markdown("---")
 
@@ -329,14 +411,23 @@ def afficher_tableau_de_bord():
     # --- Progression du budget ---
     st.subheader("Progression du budget")
     st.progress(progression)
-    st.caption(f"Vos dépenses représentent **{progression:.1%}** de votre budget total de **{format_currency(budget_max)}** ce mois-ci.")
     
-    if progression >= 1.0:
-        st.error(f"**Attention : Dépassement de budget !** Tu as dépassé ton budget de **{format_currency(depenses - budget_max)}**.")
-    elif progression >= 0.8:
-        st.warning(f"**Tu as atteint 80% de ton budget !** Il te reste seulement **{format_currency(budget_max - depenses)}** pour finir le mois.")
+    if budget_max == 0:
+        st.markdown("""
+        <div class="onboarding-card">
+            <p><strong>Objectif mensuel</strong> — Entrez un budget pour activer le suivi de votre progression et visualiser vos marges de manœuvre.</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.info(f"**Budget sous contrôle.** Il te reste encore **{format_currency(budget_max - depenses)}** de marge.")
+        st.caption(f"Vos dépenses représentent **{progression:.1%}** de votre budget total de **{format_currency(budget_max)}** ce mois-ci.")
+        if depenses == 0:
+            st.info("Aucune dépense enregistrée pour le moment. Vous avez encore tout votre budget disponible.")
+        elif progression < 0.8:
+            st.info("Budget sous contrôle. Vous gérez bien vos dépenses ce mois-ci.")
+        elif progression < 1.0:
+            st.warning("Attention, vous approchez de votre limite budgétaire.")
+        else:
+            st.error("Budget dépassé. Il serait utile de réduire certaines dépenses.")
         
     st.markdown("---")
     
@@ -390,167 +481,174 @@ def afficher_tableau_de_bord():
         st.plotly_chart(fig_line, use_container_width=True)
 
     else:
-        st.info("Continuez à ajouter des dépenses dans l'onglet 'Suivi des Dépenses' pour voir votre répartition par catégorie et graphique d'évolution.")
-        
-        # Graphiques de base si pas de données de suivi détaillées encore
-        col_f1, col_f2 = st.columns(2)
-        
-        with col_f1:
-            st.markdown("##### Dépenses vs Restant")
-            labels = ["Dépenses", "Argent restant"]
-            valeurs = [depenses, max(restant, 0)]
-            if revenus > 0:
-                fig = px.pie(names=labels, values=valeurs, hole=0.4, color=labels, color_discrete_map={"Dépenses": "#C9ADA7", "Argent restant": "#A3B18A"})
-                fig.update_traces(textinfo='percent+label')
-                fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.write("Entrez des revenus pour voir le graphique.")
-                
-        with col_f2:
-            st.markdown("##### Budget vs Dépenses")
-            fig_bar = px.bar(
-                x=["Budget Max", "Dépenses"],
-                y=[budget_max, depenses],
-                color=["Budget Max", "Dépenses"],
-                color_discrete_map={"Budget Max": "#457B9D", "Dépenses": "#C9ADA7"}
-            )
-            fig_bar.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=False, xaxis_title="", yaxis_title="Montant ($)")
-            st.plotly_chart(fig_bar, use_container_width=True)
+        if is_empty:
+            st.markdown("""
+            <div class="onboarding-card">
+                <h4>Centre d'analyse</h4>
+                <p>Les visualisations graphiques et les rapports détaillés s'afficheront ici dès que vos premières données seront saisies.</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("Continuez à ajouter des dépenses dans l'onglet 'Suivi des Dépenses' pour voir votre répartition par catégorie et graphique d'évolution.")
+            
+            # Graphiques de base si pas de données de suivi détaillées encore
+            col_f1, col_f2 = st.columns(2)
+            
+            with col_f1:
+                st.markdown("##### Dépenses vs Restant")
+                labels = ["Dépenses", "Argent restant"]
+                valeurs = [depenses, max(restant, 0)]
+                if revenus > 0:
+                    fig = px.pie(names=labels, values=valeurs, hole=0.4, color=labels, color_discrete_map={"Dépenses": "#C9ADA7", "Argent restant": "#A3B18A"})
+                    fig.update_traces(textinfo='percent+label')
+                    fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=False)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.write("Entrez des revenus pour voir le graphique.")
+                    
+            with col_f2:
+                st.markdown("##### Budget vs Dépenses")
+                fig_bar = px.bar(
+                    x=["Budget Max", "Dépenses"],
+                    y=[budget_max, depenses],
+                    color=["Budget Max", "Dépenses"],
+                    color_discrete_map={"Budget Max": "#457B9D", "Dépenses": "#C9ADA7"}
+                )
+                fig_bar.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=False, xaxis_title="", yaxis_title="Montant ($)")
+                st.plotly_chart(fig_bar, use_container_width=True)
 
 def afficher_budget_mensuel():
-    st.title("Budget")
-    st.markdown("Gérez vos revenus et dépenses en détail.")
+    st.title("Budget Mensuel")
+    st.markdown("Gérez vos revenus et vos dépenses prévues pour établir une base financière solide.")
+    st.markdown("---")
     
-    col1, col2 = st.columns(2)
+    col_main1, col_main2 = st.columns(2)
     
-    with col1:
-        st.subheader("Entrées d'argent")
-        st.session_state.revenus_mensuels = st.number_input("Revenus mensuels nets ($)", min_value=0.0, step=100.0, value=st.session_state.revenus_mensuels)
+    with col_main1:
+        st.markdown('<div class="section-revenus">', unsafe_allow_html=True)
+        st.subheader("Revenus")
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.session_state.revenus_mensuels = st.number_input("Revenus mensuels nets ($)", min_value=0.0, step=100.0, value=st.session_state.revenus_mensuels)
         revenus = st.session_state.revenus_mensuels
+        st.markdown('</div>', unsafe_allow_html=True)
         
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-fixes">', unsafe_allow_html=True)
         st.subheader("Dépenses fixes")
-        st.session_state.loyer_mensuel = st.number_input("Loyer / Hypothèque ($)", min_value=0.0, step=10.0, value=st.session_state.loyer_mensuel)
-        st.session_state.telephone_internet = st.number_input("Téléphone & Internet ($)", min_value=0.0, step=5.0, value=st.session_state.telephone_internet)
-        st.session_state.transport_mensuel = st.number_input("Transport (Auto, Commun) ($)", min_value=0.0, step=10.0, value=st.session_state.transport_mensuel)
-        st.session_state.assurances_mensuel = st.number_input("Assurances ($)", min_value=0.0, step=10.0, value=st.session_state.assurances_mensuel)
-        st.session_state.electricite_mensuel = st.number_input("Électricité ($)", min_value=0.0, step=5.0, value=st.session_state.electricite_mensuel)
-        loyer = st.session_state.loyer_mensuel
-        telephone = st.session_state.telephone_internet
-        transport = st.session_state.transport_mensuel
-        assurance = st.session_state.assurances_mensuel
-        electricite = st.session_state.electricite_mensuel
         
-        st.markdown("**Dépenses fixes :**")
+        def input_court(label, key_state, step=10.0):
+            c1, _ = st.columns([2, 1])
+            with c1:
+                st.session_state[key_state] = st.number_input(label, min_value=0.0, step=step, value=st.session_state[key_state])
+            return st.session_state[key_state]
+
+        loyer = input_court("Loyer / Hypothèque ($)", "loyer_mensuel")
+        telephone = input_court("Téléphone & Internet ($)", "telephone_internet", 5.0)
+        transport = input_court("Transport (Auto, Commun) ($)", "transport_mensuel")
+        assurance = input_court("Assurances ($)", "assurances_mensuel")
+        electricite = input_court("Électricité ($)", "electricite_mensuel", 5.0)
+        
+        st.markdown("**Dépenses fixes personnalisées :**")
         to_delete_fixed = -1
         sum_custom_fixed = 0
         for i, cat in enumerate(st.session_state.custom_fixed_categories):
-            cf1, cf2, cf3 = st.columns([3, 3, 1])
+            cf1, cf2, cf3 = st.columns([3, 2, 1])
             new_nom = cf1.text_input(f"Nom fixe {i+1}", value=cat["nom"], key=f"f_nom_{i}", label_visibility="collapsed")
             new_val = cf2.number_input(f"Montant fixe {i+1}", value=cat["montant"], key=f"f_val_{i}", label_visibility="collapsed", step=10.0)
             st.session_state.custom_fixed_categories[i]["nom"] = new_nom
             st.session_state.custom_fixed_categories[i]["montant"] = new_val
             sum_custom_fixed += new_val
-            if cf3.button("", key=f"f_del_{i}"):
+            if cf3.button("Supprimer", key=f"f_del_{i}"):
                 to_delete_fixed = i
         
         if to_delete_fixed != -1:
             st.session_state.custom_fixed_categories.pop(to_delete_fixed)
             st.rerun()
             
-        if st.button("Ajouter une dépense fixe"):
+        if st.button("Ajouter une dépense fixe", key="add_fixed"):
             st.session_state.custom_fixed_categories.append({"nom": "Nouvelle dépense fixe", "montant": 0.0})
             st.rerun()
             
         total_fixes = loyer + telephone + transport + assurance + electricite + sum_custom_fixed
+        st.markdown('</div>', unsafe_allow_html=True)
         
-    with col2:
+    with col_main2:
+        st.markdown('<div class="section-variables">', unsafe_allow_html=True)
         st.subheader("Dépenses variables")
-        st.session_state.nourriture_mensuel = st.number_input("Nourriture / Épicerie ($)", min_value=0.0, step=10.0, value=st.session_state.nourriture_mensuel)
-        st.session_state.loisirs_mensuel = st.number_input("Loisirs et Sorties ($)", min_value=0.0, step=10.0, value=st.session_state.loisirs_mensuel)
-        nourriture = st.session_state.nourriture_mensuel
-        loisirs = st.session_state.loisirs_mensuel
+        nourriture = input_court("Nourriture / Épicerie ($)", "nourriture_mensuel")
+        loisirs = input_court("Loisirs et Sorties ($)", "loisirs_mensuel")
         
-        st.markdown("**Dépenses variables :**")
+        st.markdown("**Dépenses variables personnalisées :**")
         to_delete_var = -1
         sum_custom_var = 0
         for i, cat in enumerate(st.session_state.custom_variable_categories):
-            cv1, cv2, cv3 = st.columns([3, 3, 1])
+            cv1, cv2, cv3 = st.columns([3, 2, 1])
             new_nom = cv1.text_input(f"Nom var {i+1}", value=cat["nom"], key=f"v_nom_{i}", label_visibility="collapsed")
             new_val = cv2.number_input(f"Montant var {i+1}", value=cat["montant"], key=f"v_val_{i}", label_visibility="collapsed", step=10.0)
             st.session_state.custom_variable_categories[i]["nom"] = new_nom
             st.session_state.custom_variable_categories[i]["montant"] = new_val
             sum_custom_var += new_val
-            if cv3.button("", key=f"v_del_{i}"):
+            if cv3.button("Supprimer", key=f"v_del_{i}"):
                 to_delete_var = i
         
         if to_delete_var != -1:
             st.session_state.custom_variable_categories.pop(to_delete_var)
             st.rerun()
 
-        if st.button("Ajouter une dépense variable"):
+        if st.button("Ajouter une dépense variable", key="add_var"):
             st.session_state.custom_variable_categories.append({"nom": "Nouvelle dépense variable", "montant": 0.0})
             st.rerun()
         
         total_variables = nourriture + loisirs + sum_custom_var
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # --- Section Épargne ---
     st.markdown("---")
-    st.subheader("Épargne mensuelle")
-    st.markdown("Planifiez vos cotisations dans vos comptes d'épargne enregistrés.")
-
-    col_ep1, col_ep2, col_ep3, col_ep4 = st.columns(4)
-
-    with col_ep1:
-        st.session_state.celi_mensuel = st.number_input("CELI ($)", min_value=0.0, step=25.0,
-                               help="Compte d'Épargne Libre d'Impôt", value=st.session_state.celi_mensuel)
-        celi = st.session_state.celi_mensuel
-        st.caption("**CELI** — Vos gains (intérêts, dividendes) ne sont jamais imposés. Retraits libres en tout temps. Idéal pour un fonds d'urgence ou des projets à moyen terme.")
-
-    with col_ep2:
-        st.session_state.celiapp_mensuel = st.number_input("CELIAPP ($)", min_value=0.0, step=25.0,
-                                  help="Compte d'Épargne Libre d'Impôt pour l'Achat d'une Première Propriété", value=st.session_state.celiapp_mensuel)
-        celiapp = st.session_state.celiapp_mensuel
-        st.caption("**CELIAPP** — Cotisations déductibles d'impôt **et** retraits non imposés pour acheter votre première maison. Le meilleur des deux mondes.")
-
-    with col_ep3:
-        st.session_state.reer_mensuel = st.number_input("REER ($)", min_value=0.0, step=25.0,
-                               help="Régime Enregistré d'Épargne-Retraite", value=st.session_state.reer_mensuel)
-        reer = st.session_state.reer_mensuel
-        st.caption("**REER** — Cotisations déductibles d'impôt aujourd'hui, imposées seulement au retrait (à la retraite, quand votre taux est plus bas). Parfait pour la planification retraite.")
+    st.markdown('<div class="section-epargne">', unsafe_allow_html=True)
+    st.subheader("Épargne")
+    
+    with st.container():
+        col_ep1, col_ep2, col_ep3 = st.columns(3)
+        with col_ep1:
+            st.session_state.celi_mensuel = st.number_input("CELI ($)", min_value=0.0, step=25.0, value=st.session_state.celi_mensuel)
+            st.caption("Compte d'Épargne Libre d'Impôt : Vos gains et retraits ne sont jamais imposables, idéal pour vos fonds d'urgence ou projets futurs.")
+            celi = st.session_state.celi_mensuel
+        with col_ep2:
+            st.session_state.celiapp_mensuel = st.number_input("CELIAPP ($)", min_value=0.0, step=25.0, value=st.session_state.celiapp_mensuel)
+            st.caption("Achat d'une première propriété : Profitez de déductions fiscales sur vos cotisations et d'un retrait non imposable pour votre mise de fonds.")
+            celiapp = st.session_state.celiapp_mensuel
+        with col_ep3:
+            st.session_state.reer_mensuel = st.number_input("REER ($)", min_value=0.0, step=25.0, value=st.session_state.reer_mensuel)
+            st.caption("Régime d'Épargne-Retraite : Réduisez votre impôt annuel tout en accumulant un capital pour votre retraite à l'abri de l'impôt.")
+            reer = st.session_state.reer_mensuel
 
     # --- Épargnes supplémentaires ---
-    st.markdown("**Épargnes supplémentaires :**")
-    to_delete_savings = -1
-    sum_custom_savings = 0
-    for i, cat in enumerate(st.session_state.custom_savings_categories):
-        cs1, cs2, cs3 = st.columns([3, 3, 1])
-        new_nom = cs1.text_input(f"Nom épargne {i+1}", value=cat["nom"], key=f"s_nom_{i}", label_visibility="collapsed")
-        new_val = cs2.number_input(f"Montant épargne {i+1}", value=cat["montant"], key=f"s_val_{i}", label_visibility="collapsed", step=25.0)
-        st.session_state.custom_savings_categories[i]["nom"] = new_nom
-        st.session_state.custom_savings_categories[i]["montant"] = new_val
-        sum_custom_savings += new_val
-        if cs3.button("", key=f"s_del_{i}"):
-            to_delete_savings = i
-    
-    if to_delete_savings != -1:
-        st.session_state.custom_savings_categories.pop(to_delete_savings)
-        st.rerun()
+    if st.session_state.custom_savings_categories:
+        st.markdown("**Autres projets d'épargne :**")
+        to_delete_savings = -1
+        sum_custom_savings = 0
+        for i, cat in enumerate(st.session_state.custom_savings_categories):
+            cs1, cs2, cs3 = st.columns([3, 2, 1])
+            new_nom = cs1.text_input(f"Nom épargne {i+1}", value=cat["nom"], key=f"s_nom_{i}", label_visibility="collapsed")
+            new_val = cs2.number_input(f"Montant épargne {i+1}", value=cat["montant"], key=f"s_val_{i}", label_visibility="collapsed", step=25.0)
+            st.session_state.custom_savings_categories[i]["nom"] = new_nom
+            st.session_state.custom_savings_categories[i]["montant"] = new_val
+            sum_custom_savings += new_val
+            if cs3.button("Supprimer", key=f"s_del_{i}"):
+                to_delete_savings = i
+        
+        if to_delete_savings != -1:
+            st.session_state.custom_savings_categories.pop(to_delete_savings)
+            st.rerun()
 
-    if st.button("Ajouter une épargne"):
+    if st.button("Ajouter un projet d'épargne"):
         st.session_state.custom_savings_categories.append({"nom": "Nouvelle épargne", "montant": 0.0})
         st.rerun()
     
-    total_epargne = celi + celiapp + reer + sum_custom_savings
-    sum_custom_annual_prevu = sum(cat["montant"] for cat in st.session_state.custom_annual_categories)
-    total_annuel_prevu = st.session_state.taxes_annuelles + st.session_state.permis_annuels + st.session_state.entretien_annuel + st.session_state.autres_annuels_val + sum_custom_annual_prevu
-
-    if total_epargne > 0:
-        st.info(f"Vous prévoyez épargner **{format_currency(total_epargne)}** ce mois-ci. Bravo !")
-
-    if total_annuel_prevu > 0:
-        st.info(f"**Note informative** : Vos factures annuelles totalisent **{format_currency(total_annuel_prevu)}**. Vous pouvez gérer ces détails dans l'onglet **Factures annuelles**.")
-
+    total_epargne = celi + celiapp + reer + (sum_custom_savings if 'sum_custom_savings' in locals() else 0)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     st.markdown("---")
     
     # --- Résumé ---
@@ -558,107 +656,71 @@ def afficher_budget_mensuel():
     total_sorties = depenses_totales + total_epargne
     restant = revenus - total_sorties
     
-    st.subheader("Résumé du budget mensuel")
+    st.subheader("Résumé du budget")
     
     col_res1, col_res2, col_res3, col_res4 = st.columns(4)
     col_res1.metric("Revenus", format_currency(revenus))
     col_res2.metric("Dépenses", format_currency(depenses_totales))
     col_res3.metric("Épargne", format_currency(total_epargne))
-    col_res4.metric("Restant", format_currency(restant), delta=format_currency(restant))
     
-    # Feedback instantané d'économie
-    if restant > 0:
-        st.info(f"Astuce : Si ce budget est respecté, il vous restera **{format_currency(restant)}** de marge après dépenses et épargne.")
-    elif restant < 0:
-        st.error(f"🛑 Alerte rouge : Vos dépenses et cotisations d'épargne dépassent vos revenus de **{format_currency(abs(restant))}**.")
+    # Couleur dynamique pour le restant
+    color_restant = "normal" if restant >= 0 else "inverse"
+    col_res4.metric("Restant", format_currency(restant), delta=format_currency(restant), delta_color=color_restant)
+    
+    if restant < 0:
+        st.error(f"**Attention** : Vos dépenses et épargne dépassent vos revenus de {format_currency(abs(restant))}.")
+    elif restant > 0:
+        st.success(f"**Bravo** : Il vous reste {format_currency(restant)} de marge de manœuvre.")
 
-    # --- Budget Prévu ---
     st.markdown("---")
+
     # --- Graphique ---
-    # Construction dynamique des étiquettes et valeurs
-    labels = ["Loyer", "Téléphone/Internet", "Transport", "Assurances", "Électricité", "Nourriture", "Loisirs"]
+    labels = ["Loyer", "Tél/Internet", "Transport", "Assurances", "Électricité", "Nourriture", "Loisirs"]
     valeurs = [loyer, telephone, transport, assurance, electricite, nourriture, loisirs]
     
-    # Ajout des catégories fixes personnalisées
     for cat in st.session_state.custom_fixed_categories:
         if cat["montant"] > 0:
-            labels.append(cat["nom"])
-            valeurs.append(cat["montant"])
-            
-    # Ajout des catégories variables personnalisées
+            labels.append(cat["nom"]); valeurs.append(cat["montant"])
     for cat in st.session_state.custom_variable_categories:
         if cat["montant"] > 0:
-            labels.append(cat["nom"])
-            valeurs.append(cat["montant"])
-            
-    # Ajout des épargnes
-    if celi > 0:
-        labels.append("CELI")
-        valeurs.append(celi)
-    if celiapp > 0:
-        labels.append("CELIAPP")
-        valeurs.append(celiapp)
-    if reer > 0:
-        labels.append("REER")
-        valeurs.append(reer)
-        
+            labels.append(cat["nom"]); valeurs.append(cat["montant"])
+    if celi > 0: labels.append("CELI"); valeurs.append(celi)
+    if celiapp > 0: labels.append("CELIAPP"); valeurs.append(celiapp)
+    if reer > 0: labels.append("REER"); valeurs.append(reer)
     for cat in st.session_state.custom_savings_categories:
         if cat["montant"] > 0:
-            labels.append(cat["nom"])
-            valeurs.append(cat["montant"])
-            
-    # Ajout des provisions et restant
-    labels.append("Argent Restant")
-    valeurs.append(max(restant, 0))
+            labels.append(cat["nom"]); valeurs.append(cat["montant"])
+    
+    labels.append("Argent Restant"); valeurs.append(max(restant, 0))
     
     if revenus > 0:
-        fig = px.pie(
-            names=labels,
-            values=valeurs,
-            hole=0.4,
-            color=labels,
-            color_discrete_sequence=["#7BA7BC", "#C9ADA7", "#A3B18A", "#DAD7CD", "#DED3C4", "#5B8FA8"]
-        )
-        fig.update_traces(textinfo='percent+label')
+        fig = px.pie(names=labels, values=valeurs, hole=0.4, color_discrete_sequence=px.colors.qualitative.Antique)
         fig.update_layout(margin=dict(t=20, b=20, l=20, r=20))
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Archivage du budget mensuel ---
-    st.markdown("---")
-    st.subheader("Archiver ce budget")
-    st.markdown("Sauvegardez une copie de votre budget actuel pour le consulter plus tard dans l'historique.")
-    
-    from datetime import datetime
-    mois_actuel = datetime.now().strftime("%Y-%m")
-    
-    col_arch1, col_arch2 = st.columns([2, 1])
-    with col_arch1:
-        mois_archive = st.text_input("Mois à archiver (format AAAA-MM)", value=mois_actuel)
-    with col_arch2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Archiver ce budget"):
-            archive = {
-                "mois": mois_archive,
-                "revenus": revenus,
-                "depenses_fixes": total_fixes,
-                "depenses_variables": total_variables,
-                "epargne": total_epargne,
-                "total_sorties": total_sorties,
-                "restant": restant
-            }
-            # Remplacer si le mois existe déjà
-            st.session_state.budget_historique = [
-                h for h in st.session_state.budget_historique if h["mois"] != mois_archive
-            ]
-            st.session_state.budget_historique.append(archive)
-            st.session_state.budget_historique.sort(key=lambda x: x["mois"])
-            sauvegarder_donnees_budget()
-            st.info(f"Budget archivé pour **{mois_archive}** !")
+    # --- Archivage ---
+    with st.expander("Archiver ce budget"):
+        st.markdown("Sauvegardez ce budget pour le consulter dans votre historique.")
+        from datetime import datetime
+        mois_actuel = datetime.now().strftime("%Y-%m")
+        col_arch1, col_arch2 = st.columns([2, 1])
+        with col_arch1:
+            mois_archive = st.text_input("Mois à archiver (AAAA-MM)", value=mois_actuel)
+        with col_arch2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Sauvegarder l'archive"):
+                archive = {"mois": mois_archive, "revenus": revenus, "depenses_fixes": total_fixes, "depenses_variables": total_variables, "epargne": total_epargne, "total_sorties": total_sorties, "restant": restant}
+                st.session_state.budget_historique = [h for h in st.session_state.budget_historique if h["mois"] != mois_archive]
+                st.session_state.budget_historique.append(archive)
+                st.session_state.budget_historique.sort(key=lambda x: x["mois"])
+                sauvegarder_donnees_budget()
+                st.info(f"Budget de {mois_archive} archivé !")
 
 
 def afficher_prevoyance_annuelle():
-    st.title("Factures")
-    st.markdown("Identifiez vos dépenses importantes qui surviennent une fois par an pour mieux les anticiper.")
+    st.title("Factures annuelles")
+    st.markdown("Anticipez vos grosses dépenses ponctuelles pour équilibrer votre budget mensuel.")
+    st.markdown("---")
     
     col_ann1, col_ann2 = st.columns(2)
     
@@ -678,13 +740,13 @@ def afficher_prevoyance_annuelle():
     to_delete_annual = -1
     sum_custom_annual = 0
     for i, cat in enumerate(st.session_state.custom_annual_categories):
-        ca1, ca2, ca3 = st.columns([3, 3, 1])
+        ca1, ca2, ca3 = st.columns([3, 2, 1])
         new_nom = ca1.text_input(f"Nom annuel {i+1}", value=cat["nom"], key=f"a_nom_{i}", label_visibility="collapsed")
         new_val = ca2.number_input(f"Montant annuel {i+1}", value=cat["montant"], key=f"a_val_{i}", label_visibility="collapsed", step=50.0)
         st.session_state.custom_annual_categories[i]["nom"] = new_nom
         st.session_state.custom_annual_categories[i]["montant"] = new_val
         sum_custom_annual += new_val
-        if ca3.button("", key=f"a_del_{i}"):
+        if ca3.button("Supprimer", key=f"a_del_{i}"):
             to_delete_annual = i
     
     if to_delete_annual != -1:
@@ -696,14 +758,19 @@ def afficher_prevoyance_annuelle():
         st.rerun()
 
     total_annuel = st.session_state.taxes_annuelles + st.session_state.permis_annuels + st.session_state.entretien_annuel + st.session_state.autres_annuels_val + sum_custom_annual
+    montant_mensuel = total_annuel / 12 if total_annuel > 0 else 0
     
     st.markdown("---")
-    st.metric("Total des dépenses annuelles", format_currency(total_annuel))
+    st.subheader("Résumé pour la planification")
     
-    st.info("""
-    **Conseil** : Ces dépenses sont importantes et arrivent une fois par an. Il est prudent de garder 
-    ce montant global en tête pour bien planifier vos économies et éviter les surprises au moment du paiement.
-    """)
+    col_res1, col_res2 = st.columns(2)
+    col_res1.metric("Total annuel", format_currency(total_annuel))
+    col_res2.metric("Équivalent mensuel", format_currency(montant_mensuel))
+    
+    if montant_mensuel > 0:
+        st.info(f"Pour couvrir ces dépenses sereinement, vous devriez prévoir de mettre de côté environ {format_currency(montant_mensuel)} chaque mois.")
+    else:
+        st.info("Ajoutez des montants ci-dessus pour planifier vos dépenses annuelles.")
 
 def afficher_suivi_depenses():
     st.title("Dépenses")
@@ -741,10 +808,10 @@ def afficher_suivi_depenses():
                 })
                 # Using pd.concat instead of append
                 st.session_state.depenses_list = pd.concat([st.session_state.depenses_list, nouvelle_depense], ignore_index=True)
-                st.info("Dépense ajoutée avec succès ! 🎉")
+                st.info("Dépense ajoutée avec succès.")
                 st.rerun()
 
-    with st.expander("⚙️ Gérer les catégories personnalisées"):
+    with st.expander("Gérer les catégories personnalisées"):
         nouvelle_cat = st.text_input("Ajouter une nouvelle catégorie")
         if st.button("Ajouter") and nouvelle_cat:
             if nouvelle_cat not in st.session_state.categories_list:
@@ -783,7 +850,7 @@ def afficher_suivi_depenses():
             
         st.markdown("---")
         
-        st.subheader("🔍 Filtres rapides et Analyse")
+        st.subheader("Filtres rapides et Analyse")
         
         # Création des filtres
         filtre_cat = st.multiselect("Filtrer par catégories", options=st.session_state.categories_list, default=[])
@@ -854,7 +921,7 @@ def afficher_analyse_depenses():
     with col_dl2:
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 Exporter l'historique (CSV)",
+            label="Exporter l'historique (CSV)",
             data=csv,
             file_name='mes_depenses.csv',
             mime='text/csv',
@@ -1127,13 +1194,148 @@ def afficher_historique():
         else:
             st.info("Il faut au moins deux mois de données pour activer la comparaison directe.")
 
+def afficher_assistant_ia():
+    # --- Style CSS Conversationnel ---
+    st.markdown("""
+    <style>
+        .ia-container {
+            background-color: #FAF7F2;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid #E6DFD3;
+        }
+        .ia-bubble {
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #D4A373;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            color: #3D405B;
+        }
+        .ia-bubble-accent {
+            background-color: #F8F4ED;
+            border-left: 5px solid #A3B18A;
+        }
+        .score-circle {
+            background: white;
+            border: 8px solid #A3B18A;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 800;
+            color: #3D405B;
+            margin: 0 auto 10px auto;
+            box-shadow: 0 10px 20px rgba(163, 177, 138, 0.2);
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.title("Assistant Intelligence Financière")
+    st.write("Bonjour. J'ai analysé votre budget du mois. Voici mes observations personnalisées.")
+    st.markdown("---")
+    
+    if st.session_state.depenses_list.empty:
+        st.info("Bonjour. Pour commencer l'analyse, veuillez enregistrer vos premières dépenses dans le module de suivi.")
+        return
+
+    # --- CALCULS DE BASE ---
+    df = st.session_state.depenses_list.copy()
+    revenus = st.session_state.revenus_mensuels
+    budget_max = revenus if revenus > 0 else 3000.0 # Fallback
+    
+    import datetime
+    aujourdhui = datetime.date.today()
+    mois_actuel = aujourdhui.strftime("%Y-%m")
+    df['Date'] = pd.to_datetime(df['Date'])
+    df_mois = df[df['Date'].dt.strftime('%Y-%m') == mois_actuel].copy()
+    
+    total_dep_mois = df_mois["Montant"].sum() if not df_mois.empty else 0
+    pct_usage = (total_dep_mois / budget_max) * 100
+    argent_restant = budget_max - total_dep_mois
+    
+    # Calcul de l'épargne réelle configurée
+    epargne_mensuelle = st.session_state.celi_mensuel + st.session_state.celiapp_mensuel + st.session_state.reer_mensuel
+    pct_epargne = (epargne_mensuelle / budget_max * 100) if budget_max > 0 else 0
+    
+    # Projection
+    jour_actuel = aujourdhui.day
+    projection = (total_dep_mois / jour_actuel * 30) if jour_actuel > 0 else total_dep_mois
+
+    # --- CALCUL DU SCORE FINANCIER ---
+    score = 100
+    if pct_usage > 100: score -= 35
+    elif pct_usage > 85: score -= 15
+    if argent_restant < 0: score -= 15
+    if pct_epargne < 10: score -= 15
+    if pct_epargne >= 20: score += 5
+    score = max(0, min(100, score))
+    
+    if score >= 80: score_label = "Très bon contrôle"; color_score = "#A3B18A"
+    elif score >= 60: score_label = "Situation correcte"; color_score = "#D4A373"
+    elif score >= 40: score_label = "A surveiller"; color_score = "#E9C46A"
+    else: score_label = "Attention"; color_score = "#E76F51"
+
+    # --- AFFICHAGE ---
+    col_left, col_right = st.columns([1, 1.5])
+    
+    with col_left:
+        st.markdown(f'<div class="score-circle" style="border-color: {color_score}">{score}</div>', unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; font-weight: bold;'>SCORE : {score_label}</p>", unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("#### Action recommandée")
+        if pct_usage > 80:
+            st.warning("Action suggérée : réduire les dépenses variables de 50$ cette semaine pour sécuriser le mois.")
+        elif pct_epargne < 15:
+            st.info("Action suggérée : transférer 75$ supplémentaires vers votre épargne pour atteindre vos objectifs.")
+        else:
+            st.success("Action suggérée : maintenir votre rigueur actuelle. Vous êtes sur une excellente trajectoire.")
+
+    with col_right:
+        # Message 1: Top Catégorie
+        if not df_mois.empty:
+            top_cat = df_mois.groupby("Catégorie")["Montant"].sum().idxmax()
+            st.markdown(f'<div class="ia-bubble">Votre plus grande catégorie de dépense ce mois-ci est <b>{top_cat}</b>. Est-ce un poste que vous pourriez optimiser ?</div>', unsafe_allow_html=True)
+        
+        # Message 2: Budget %
+        st.markdown(f'<div class="ia-bubble ia-bubble-accent">Votre budget est utilisé à <b>{pct_usage:.0f}%</b>. Il vous reste une marge de {format_currency(argent_restant)}.</div>', unsafe_allow_html=True)
+        
+        # Message 3: Épargne
+        st.markdown(f'<div class="ia-bubble">Votre épargne représente <b>{pct_epargne:.1f}%</b> de vos revenus. L\'objectif idéal recommandé est souvent de 20%.</div>', unsafe_allow_html=True)
+        
+        # Message 4: Projection
+        st.markdown(f'<div class="ia-bubble ia-bubble-accent">Si votre rythme actuel continue, vos dépenses pourraient atteindre environ <b>{format_currency(projection)}</b> d\'ici la fin du mois.</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+    
+    # --- MODULE INTERACTIF ---
+    st.subheader("Besoin d'un éclairage spécifique ?")
+    choix = st.selectbox("Choisissez une analyse", ["Résumé rapide", "Conseil épargne", "Conseil dépenses", "Prévision fin de mois"])
+    
+    if choix == "Résumé rapide":
+        st.write(f"En résumé : Votre santé financière est notée à {score}/100 ce mois-ci. Votre gestion est proactive et vos principaux postes de coûts sont identifiés.")
+    elif choix == "Conseil épargne":
+        st.write(f"Pour booster votre épargne ({pct_epargne:.1f}% actuellement), essayez d'automatiser vos virements dès la réception de votre salaire. Même 20$ de plus par mois font une différence sur un an.")
+    elif choix == "Conseil dépenses":
+        st.write("Analysez vos dépenses fixes. Il y a souvent des abonnements oubliés ou des contrats d'assurances qui peuvent être renégociés pour libérer du budget.")
+    elif choix == "Prévision fin de mois":
+        status_forecast = "inférieur à vos revenus" if projection < revenus else "supérieur à vos revenus"
+        st.write(f"D'après les tendances, votre total de fin de mois sera {status_forecast}. Planifiez en conséquence pour éviter tout découvert.")
+
+
+
 # --- Navigation ---
 st.sidebar.title("Navigation")
 
 if 'page_active' not in st.session_state:
     st.session_state.page_active = "Tableau de Bord"
 
-pages = ["Tableau de Bord", "Budget Mensuel", "Factures annuelles", "Suivi des Dépenses", "Analyse des Dépenses", "Historique & Comparaisons"]
+pages = ["Tableau de Bord", "Budget Mensuel", "Factures annuelles", "Suivi des Dépenses", "Analyse des Dépenses", "Historique & Comparaisons", "Assistant IA"]
 
 for page in pages:
     if st.sidebar.button(page, key=f"nav_{page}", use_container_width=True):
@@ -1158,3 +1360,5 @@ elif menu == "Analyse des Dépenses":
     afficher_analyse_depenses()
 elif menu == "Historique & Comparaisons":
     afficher_historique()
+elif menu == "Assistant IA":
+    afficher_assistant_ia()
