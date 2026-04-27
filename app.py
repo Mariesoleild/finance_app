@@ -324,12 +324,22 @@ def afficher_tableau_de_bord():
     mois_actuel = aujourdhui.strftime("%Y-%m")
     
     st.sidebar.subheader("Période visualisée")
-    selected_month = st.sidebar.selectbox("Choisir le mois", 
-                                        options=sorted(list(set([mois_actuel] + [d.strftime("%Y-%m") for d in pd.to_datetime(st.session_state.depenses_list['Date'])] if not st.session_state.depenses_list.empty else [mois_actuel])), reverse=True))
+    # Construire la liste complète des mois : mois actuel + mois du suivi + mois archivés
+    mois_archivés = [h["mois"] for h in st.session_state.budget_historique]
+    mois_transactions = ([d.strftime("%Y-%m") for d in pd.to_datetime(st.session_state.depenses_list['Date'])]
+                         if not st.session_state.depenses_list.empty else [])
+    tous_les_mois = sorted(list(set([mois_actuel] + mois_archivés + mois_transactions)), reverse=True)
+    selected_month = st.sidebar.selectbox("Choisir le mois", options=tous_les_mois)
 
-    # Utiliser les données du budget mensuel pour revenus et budget max
-    revenus = st.session_state.revenus_mensuels
-    budget_max = revenus  # Le budget max est basé sur les revenus configurés dans Budget Mensuel
+    # Chercher si ce mois a un budget archivé
+    archive_mois = next((h for h in st.session_state.budget_historique if h["mois"] == selected_month), None)
+
+    # Utiliser les données archivées si disponibles, sinon le budget actif
+    if archive_mois:
+        revenus = archive_mois["revenus"]
+    else:
+        revenus = st.session_state.revenus_mensuels
+    budget_max = revenus  # Le budget max est basé sur les revenus du mois visualisé
     
     # Filtrer les dépenses pour le mois sélectionné
     df_all = st.session_state.depenses_list.copy()
@@ -374,7 +384,29 @@ def afficher_tableau_de_bord():
         st.metric("Dépenses totales", aff_depenses, delta=del_depenses, delta_color="inverse")
     with col3:
         st.metric("Argent restant", aff_restant, delta=del_restant, delta_color="normal")
-        
+
+    # --- Détails du budget archivé pour ce mois ---
+    if archive_mois:
+        st.markdown("")
+        with st.container():
+            st.markdown("""
+            <div style="background: white; border-left: 4px solid #A3B18A; border-radius: 8px;
+                        padding: 16px 20px; margin: 8px 0 4px 0;
+                        box-shadow: 0 2px 8px rgba(138,131,116,0.06); border: 1px solid #E6DFD3;">
+                <p style="margin:0 0 10px 0; font-weight: 700; color: #3D405B; font-size: 0.95rem;">
+                    Archive du budget — {mois}
+                </p>
+            </div>
+            """.format(mois=archive_mois["mois"]), unsafe_allow_html=True)
+            col_arch1, col_arch2, col_arch3, col_arch4 = st.columns(4)
+            col_arch1.metric("Dép. Fixes", format_currency(archive_mois.get("depenses_fixes", 0)))
+            col_arch2.metric("Dép. Variables", format_currency(archive_mois.get("depenses_variables", 0)))
+            col_arch3.metric("Épargne", format_currency(archive_mois.get("epargne", 0)))
+            restant_arch = archive_mois.get("restant", 0)
+            col_arch4.metric("Restant budgété", format_currency(restant_arch),
+                             delta=format_currency(restant_arch),
+                             delta_color="normal" if restant_arch >= 0 else "inverse")
+
     st.markdown("---")
 
     # --- Résumé Comparatif (Nouveauté) ---
